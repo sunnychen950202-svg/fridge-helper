@@ -1,0 +1,677 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>冰箱救援小幫手</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🍳</text></svg>">
+<style>
+:root{
+  --bg:#FFF8EF; --card:#FFFFFF; --line:#F1E2CF; --text:#4A3B2F; --muted:#8C7A68;
+  --accent:#F28C28; --accent-d:#D9711A; --soft:#FFF1E0;
+  --green:#4CAF50; --yellow:#E9A800; --red:#E5533D;
+}
+*{box-sizing:border-box}
+body{margin:0;font-family:"Noto Sans TC","PingFang TC","Microsoft JhengHei",system-ui,sans-serif;background:var(--bg);color:var(--text);line-height:1.55}
+button{font-family:inherit;cursor:pointer}
+.wrap{max-width:1100px;margin:0 auto;padding:16px}
+
+/* ===== 小幫手 ===== */
+.hero{display:flex;align-items:center;gap:16px;background:var(--card);border:2px solid var(--line);border-radius:22px;padding:14px 18px;box-shadow:0 4px 0 var(--line)}
+.bot{width:96px;height:96px;flex:0 0 96px}
+.bot.bounce{animation:bounce .5s}
+@keyframes bounce{0%,100%{transform:translateY(0)}40%{transform:translateY(-8px)}70%{transform:translateY(2px)}}
+.eye{animation:blink 4s infinite;transform-origin:center;transform-box:fill-box}
+@keyframes blink{0%,94%,100%{transform:scaleY(1)}97%{transform:scaleY(.1)}}
+.hero-text h1{margin:0;font-size:1.35rem;color:var(--accent-d)}
+.bubble{position:relative;margin-top:6px;background:var(--soft);border-radius:14px;padding:10px 14px;font-size:1rem;min-height:2.6em}
+.bubble::before{content:"";position:absolute;left:-8px;top:14px;border:8px solid transparent;border-right-color:var(--soft);border-left:0}
+
+/* ===== 版面 ===== */
+.grid{display:grid;grid-template-columns:1fr 1.1fr;gap:16px;margin-top:16px}
+@media (max-width:820px){.grid{grid-template-columns:1fr}.bot{width:72px;height:72px;flex-basis:72px}}
+.panel{background:var(--card);border:2px solid var(--line);border-radius:20px;padding:16px}
+.panel h2{margin:0 0 10px;font-size:1.1rem;display:flex;align-items:center;gap:6px}
+.panel h2 .count{margin-left:auto;font-size:.85rem;color:var(--muted);font-weight:normal}
+
+/* ===== 新增食材 ===== */
+.tabs{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
+.tab{border:2px solid var(--line);background:#fff;border-radius:999px;padding:4px 12px;font-size:.9rem;color:var(--text)}
+.tab.on{background:var(--accent);border-color:var(--accent);color:#fff}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:2px dashed var(--line);background:#fff;border-radius:12px;padding:5px 10px;font-size:.92rem;color:var(--text);transition:.15s}
+.chip:hover{border-color:var(--accent)}
+.chip.in{border-style:solid;border-color:var(--green);background:#EEF8EE}
+.chip.in::after{content:" ✓";color:var(--green);font-weight:bold}
+.inputrow{display:flex;gap:6px;margin-top:12px}
+.inputrow input{flex:1;min-width:0;border:2px solid var(--line);border-radius:12px;padding:8px 10px;font-size:1rem;font-family:inherit}
+.inputrow input:focus{outline:none;border-color:var(--accent)}
+.btn{border:none;border-radius:12px;padding:8px 14px;font-size:.95rem;background:var(--accent);color:#fff;white-space:nowrap}
+.btn:hover{background:var(--accent-d)}
+.btn.ghost{background:#fff;color:var(--text);border:2px solid var(--line)}
+.btn.ghost:hover{border-color:var(--accent)}
+.btn.listening{background:var(--red);animation:pulse 1s infinite}
+@keyframes pulse{50%{opacity:.6}}
+.minirow{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+.minirow .btn{font-size:.85rem;padding:6px 10px}
+
+/* ===== 冰箱清單 ===== */
+.fridge{margin-top:14px;display:flex;flex-direction:column;gap:6px}
+.empty{color:var(--muted);text-align:center;padding:18px 8px;border:2px dashed var(--line);border-radius:14px}
+.item{border:2px solid var(--line);border-radius:14px;overflow:hidden}
+.item-top{display:flex;align-items:center;gap:8px;padding:7px 10px;cursor:pointer;background:#fff}
+.item-top .nm{flex:1}
+.dot{width:10px;height:10px;border-radius:50%}
+.badge{font-size:.8rem;padding:2px 8px;border-radius:999px;color:#fff}
+.green{background:var(--green)} .yellow{background:var(--yellow)} .red{background:var(--red)}
+.item.red-b{border-color:var(--red)} .item.yellow-b{border-color:var(--yellow)}
+.edit{display:none;padding:8px 10px;background:var(--soft);gap:8px;flex-wrap:wrap;align-items:center;font-size:.88rem}
+.item.open .edit{display:flex}
+.edit input{border:1px solid var(--line);border-radius:8px;padding:4px 6px;font-family:inherit}
+.edit input[type=number]{width:64px}
+.del{margin-left:auto;background:none;border:1px solid var(--red);color:var(--red);border-radius:8px;padding:3px 10px}
+
+/* ===== 偏好 ===== */
+.prefs{display:flex;flex-wrap:wrap;gap:10px 16px;align-items:center;margin-bottom:14px;padding-bottom:12px;border-bottom:2px dashed var(--line)}
+.prefs label{display:flex;align-items:center;gap:4px;cursor:pointer}
+.prefs select{border:2px solid var(--line);border-radius:10px;padding:4px 8px;font-family:inherit}
+
+/* ===== 推薦 ===== */
+.recs{display:flex;flex-direction:column;gap:10px}
+.rec{display:flex;gap:12px;align-items:center;border:2px solid var(--line);border-radius:16px;padding:10px 12px;background:#fff;cursor:pointer;text-align:left;width:100%;color:var(--text);transition:.15s}
+.rec:hover{border-color:var(--accent);transform:translateY(-2px)}
+.rank{font-size:1.9rem;flex:0 0 auto}
+.rec-body{flex:1;min-width:0}
+.rec-title{font-weight:bold;font-size:1.05rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.tag{font-size:.75rem;font-weight:normal;padding:1px 7px;border-radius:999px;background:var(--soft);color:var(--accent-d)}
+.tag.warn{background:#FDECEA;color:var(--red)}
+.bar{height:8px;background:#F3E9DC;border-radius:999px;margin:6px 0 4px;overflow:hidden}
+.bar span{display:block;height:100%;background:linear-gradient(90deg,#FFB561,var(--accent));border-radius:999px}
+.meta{font-size:.85rem;color:var(--muted)}
+.miss{color:var(--red)}
+.lookup-row{display:flex;align-items:center;gap:8px;flex-wrap:wrap;margin:-4px 0 14px;font-size:.95rem}
+.lookup-row select{border:2px solid var(--line);border-radius:10px;padding:4px 8px;font-family:inherit;font-size:.95rem}
+.lookup-head{display:flex;align-items:center;gap:8px;flex-wrap:wrap;background:var(--soft);border-radius:14px;padding:8px 12px;font-weight:bold}
+.lookup-head .btn{margin-left:auto;font-size:.85rem;padding:5px 10px}
+.look{background:none;border:1px solid var(--line);border-radius:8px;padding:1px 7px;font-size:.8rem;color:var(--accent-d)}
+.look:hover{border-color:var(--accent);background:var(--soft)}
+
+/* ===== 食譜視窗 ===== */
+.overlay{position:fixed;inset:0;background:rgba(60,40,20,.45);display:none;align-items:center;justify-content:center;padding:14px;z-index:10}
+.overlay.show{display:flex}
+.modal{background:#fff;border-radius:22px;max-width:560px;width:100%;max-height:90vh;overflow:auto;padding:20px 22px;position:relative}
+.modal h3{margin:0 0 4px;font-size:1.4rem}
+.close{position:absolute;right:12px;top:10px;background:none;border:none;font-size:1.5rem;color:var(--muted)}
+.modal h4{margin:16px 0 6px;color:var(--accent-d)}
+.ing-list{display:flex;flex-wrap:wrap;gap:6px;list-style:none;padding:0;margin:0}
+.ing-list li{background:var(--soft);border-radius:10px;padding:3px 10px;font-size:.92rem}
+.ing-list li.no{background:#FDECEA}
+.ing-list li.opt{background:#F4F4F4;color:var(--muted)}
+.steps{padding-left:22px;margin:0}
+.steps li{margin-bottom:6px}
+.cook-row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:18px;padding-top:14px;border-top:2px dashed var(--line)}
+.stars button{background:none;border:none;font-size:1.6rem;color:#DDD;padding:0 2px}
+.stars button.on{color:#FFB400}
+footer{text-align:center;color:var(--muted);font-size:.8rem;margin:22px 0 8px}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <!-- 小幫手 -->
+  <section class="hero">
+    <svg class="bot" id="bot" viewBox="0 0 100 100" aria-hidden="true">
+      <!-- 廚師帽 -->
+      <circle cx="36" cy="16" r="10" fill="#fff" stroke="#E8D5BF" stroke-width="2"/>
+      <circle cx="50" cy="11" r="12" fill="#fff" stroke="#E8D5BF" stroke-width="2"/>
+      <circle cx="64" cy="16" r="10" fill="#fff" stroke="#E8D5BF" stroke-width="2"/>
+      <rect x="30" y="16" width="40" height="14" rx="3" fill="#fff" stroke="#E8D5BF" stroke-width="2"/>
+      <!-- 頭 -->
+      <rect x="18" y="28" width="64" height="52" rx="20" fill="#FFD9A8" stroke="#E07B1F" stroke-width="3"/>
+      <circle class="eye" cx="38" cy="50" r="5" fill="#4A3B2F"/>
+      <circle class="eye" cx="62" cy="50" r="5" fill="#4A3B2F"/>
+      <circle cx="29" cy="60" r="5" fill="#FF9F9F" opacity=".6"/>
+      <circle cx="71" cy="60" r="5" fill="#FF9F9F" opacity=".6"/>
+      <path id="mouth" d="M40 62 Q50 72 60 62" fill="none" stroke="#4A3B2F" stroke-width="3" stroke-linecap="round"/>
+      <path id="sweat" d="M76 36 q4 7 0 9 q-4 -2 0 -9z" fill="#7EC8F2" style="display:none"/>
+      <!-- 身體 -->
+      <rect x="34" y="80" width="32" height="16" rx="6" fill="#F28C28"/>
+    </svg>
+    <div class="hero-text">
+      <h1>冰箱救援小幫手</h1>
+      <div class="bubble" id="bubble">嗨！我是你的下廚小幫手。</div>
+    </div>
+  </section>
+
+  <div class="grid">
+    <!-- 左：我的冰箱 -->
+    <section class="panel">
+      <h2>🧊 我的冰箱 <span class="count" id="fridgeCount"></span></h2>
+      <div class="tabs" id="tabs"></div>
+      <div class="chips" id="chips"></div>
+
+      <div class="inputrow">
+        <input id="txt" placeholder="或直接輸入：雞胸肉、高麗菜、紅蘿蔔">
+        <button class="btn" id="addTxt">加入</button>
+        <button class="btn ghost" id="mic" title="語音輸入">🎤</button>
+      </div>
+      <div class="minirow">
+        <button class="btn ghost" id="demo">🎲 放入示範食材</button>
+        <button class="btn ghost" id="clear">🗑️ 清空冰箱</button>
+      </div>
+
+      <div class="fridge" id="fridge"></div>
+    </section>
+
+    <!-- 右：偏好 + 推薦 -->
+    <section class="panel">
+      <h2>🍳 今天煮什麼？</h2>
+      <div class="prefs">
+        <label><input type="checkbox" id="pSpicy"> 不吃辣</label>
+        <label><input type="checkbox" id="pVeg"> 素食（蛋奶素）</label>
+        <label>⏱️
+          <select id="pTime">
+            <option value="0">時間不限</option>
+            <option value="30">30 分鐘內</option>
+            <option value="15">15 分鐘內</option>
+          </select>
+        </label>
+      </div>
+      <div class="lookup-row">
+        🔍 依食材查菜譜：
+        <select id="lookSel"><option value="">— 選擇食材 —</option></select>
+      </div>
+      <div class="recs" id="recs"></div>
+    </section>
+  </div>
+
+  <footer>冰箱救援小幫手 v2 ・ 冰箱內容與評分只存在你的瀏覽器中 ・ 保存天數為一般參考值</footer>
+</div>
+
+<!-- 食譜視窗 -->
+<div class="overlay" id="overlay">
+  <div class="modal" id="modal"></div>
+</div>
+
+<script>
+/* ================= 資料：食材（名稱, 分類, 圖示, 預設保存天數） ================= */
+const CATS = ['肉類','海鮮','蛋豆類','蔬菜','菇類','主食'];
+const CAT_ICON = {'肉類':'🥩','海鮮':'🦐','蛋豆類':'🥚','蔬菜':'🥬','菇類':'🍄','主食':'🍚'};
+const ING_RAW = [
+  ['豬肉絲','肉類','🥩',3],['絞肉','肉類','🥩',2],['雞胸肉','肉類','🍗',2],['雞腿肉','肉類','🍗',2],
+  ['牛肉片','肉類','🥩',3],['培根','肉類','🥓',7],['五花肉','肉類','🥓',3],
+  ['蝦仁','海鮮','🦐',2],['鯛魚片','海鮮','🐟',2],['蛤蜊','海鮮','🐚',1],
+  ['花枝','海鮮','🦑',2],['鮭魚','海鮮','🍣',2],['蚵仔','海鮮','🦪',1],['鯖魚','海鮮','🐟',2],
+  ['雞蛋','蛋豆類','🥚',14],['豆腐','蛋豆類','🧊',3],['豆干','蛋豆類','🟫',5],
+  ['高麗菜','蔬菜','🥬',7],['番茄','蔬菜','🍅',5],['紅蘿蔔','蔬菜','🥕',14],['洋蔥','蔬菜','🧅',14],
+  ['青椒','蔬菜','🫑',5],['茄子','蔬菜','🍆',4],['小白菜','蔬菜','🥬',3],['菠菜','蔬菜','🥬',3],
+  ['青江菜','蔬菜','🥬',3],['地瓜葉','蔬菜','🌿',2],['空心菜','蔬菜','🌿',2],['馬鈴薯','蔬菜','🥔',21],
+  ['玉米','蔬菜','🌽',3],['小黃瓜','蔬菜','🥒',5],['九層塔','蔬菜','🌿',3],['青蔥','蔬菜','🌱',5],
+  ['蒜頭','蔬菜','🧄',30],['薑','蔬菜','🫚',21],['辣椒','蔬菜','🌶️',7],['絲瓜','蔬菜','🥒',4],
+  ['白蘿蔔','蔬菜','🤍',10],
+  ['香菇','菇類','🍄',5],['杏鮑菇','菇類','🍄',5],['金針菇','菇類','🍄',4],
+  ['白飯','主食','🍚',3],['麵條','主食','🍜',5],['冬粉','主食','🍜',180]
+];
+const ING = {};
+ING_RAW.forEach(([name,cat,emoji,shelf]) => ING[name] = {name,cat,emoji,shelf});
+
+/* 文字／語音輸入時可辨識的別名 */
+const ALIAS = {
+  '蛋':'雞蛋','蕃茄':'番茄','西紅柿':'番茄','胡蘿蔔':'紅蘿蔔','包心菜':'高麗菜','甘藍':'高麗菜',
+  '蔥':'青蔥','蒜':'蒜頭','大蒜':'蒜頭','生薑':'薑','飯':'白飯','米飯':'白飯','麵':'麵條',
+  '雞胸':'雞胸肉','雞腿':'雞腿肉','牛肉':'牛肉片','豬肉':'豬肉絲','肉絲':'豬肉絲','豬絞肉':'絞肉',
+  '蝦':'蝦仁','鯛魚':'鯛魚片','魚片':'鯛魚片','洋芋':'馬鈴薯','番薯葉':'地瓜葉','甜椒':'青椒',
+  '黃瓜':'小黃瓜','羅勒':'九層塔','菜頭':'白蘿蔔','粉絲':'冬粉','蛤仔':'蛤蜊','豆乾':'豆干',
+  '墨魚':'花枝','烏賊':'花枝','三文魚':'鮭魚','牡蠣':'蚵仔','生蠔':'蚵仔','蚵':'蚵仔','青花魚':'鯖魚'
+};
+
+/* ================= 資料：34 道中式家常菜 =================
+   main  = 主要食材（計入吻合度；陣列代表「任一即可」）
+   extras= 可加食材（有更好，不計入吻合度）
+   seas  = 調味料（預設家中常備） */
+const GREENS = ['青江菜','小白菜','菠菜','地瓜葉','空心菜'];
+const R = [
+ {id:'r1',name:'番茄炒蛋',emoji:'🍅',main:['雞蛋','番茄'],extras:['青蔥'],seas:['鹽','糖','番茄醬','油'],time:15,diff:'簡單',spicy:false,
+  steps:['番茄切塊，雞蛋打散並加少許鹽。','熱鍋下油，倒入蛋液炒到半熟後先盛起。','原鍋下番茄炒軟出汁，加 1 大匙番茄醬和一點糖。','倒回炒蛋拌勻，撒上蔥花即可。']},
+ {id:'r2',name:'蒸蛋',emoji:'🥚',main:['雞蛋'],extras:['青蔥'],seas:['鹽','醬油','水'],time:20,diff:'簡單',spicy:false,
+  steps:['雞蛋打散，加入約 1.5 倍蛋液的水和少許鹽拌勻。','用濾網過篩後倒入碗中，蓋上盤子。','電鍋外鍋放半杯水，蒸約 12 分鐘。','起鍋淋少許醬油、撒蔥花。']},
+ {id:'r3',name:'高麗菜炒肉絲',emoji:'🥬',main:['高麗菜','豬肉絲'],extras:['紅蘿蔔','蒜頭'],seas:['醬油','米酒','太白粉','鹽','油'],time:15,diff:'簡單',spicy:false,
+  steps:['肉絲用醬油、米酒、太白粉抓醃 5 分鐘。','高麗菜洗淨用手剝成片，蒜頭切片。','熱油炒肉絲至變色後盛起，再爆香蒜片。','下高麗菜大火快炒，加鹽調味，倒回肉絲拌炒即可。']},
+ {id:'r4',name:'雞胸肉炒高麗菜',emoji:'🍗',main:['雞胸肉','高麗菜','紅蘿蔔'],extras:['蒜頭'],seas:['鹽','醬油','米酒','太白粉','油'],time:15,diff:'簡單',spicy:false,
+  steps:['雞胸肉切片，用醬油、米酒、太白粉醃 10 分鐘。','紅蘿蔔切片、高麗菜切片、蒜頭切末。','熱油將雞肉煎到兩面變白後盛起。','爆香蒜末，下紅蘿蔔炒軟，再下高麗菜炒軟。','倒回雞肉，加鹽調味拌炒均勻。']},
+ {id:'r5',name:'三杯雞',emoji:'🍗',main:['雞腿肉','九層塔'],extras:['蒜頭','薑','辣椒'],seas:['麻油','醬油','米酒','冰糖'],time:30,diff:'中等',spicy:false,
+  steps:['雞腿肉切塊，薑切片、蒜頭去皮。','麻油小火煸香薑片和蒜頭至微焦。','下雞肉煎到表面金黃。','加入醬油、米酒各 2 大匙和少許冰糖，蓋鍋燜煮 15 分鐘。','開大火收汁，最後拌入九層塔即可。']},
+ {id:'r6',name:'宮保雞丁',emoji:'🌶️',main:['雞胸肉','小黃瓜'],extras:['蒜頭','辣椒'],seas:['醬油','醋','糖','米酒','太白粉','花生（可省略）'],time:20,diff:'中等',spicy:true,
+  steps:['雞胸肉切丁，用醬油、米酒、太白粉醃 10 分鐘。','小黃瓜切丁，辣椒切段，蒜頭切片。','調醬汁：醬油 2、醋 1、糖 1 大匙，加少許太白粉水。','熱油炒雞丁至熟，下辣椒、蒜片爆香，再下小黃瓜。','倒入醬汁快速拌炒收汁，可撒上花生。']},
+ {id:'r7',name:'麻婆豆腐',emoji:'🌶️',main:['豆腐','絞肉'],extras:['蒜頭','青蔥'],seas:['豆瓣醬','醬油','糖','太白粉','花椒粉'],time:20,diff:'中等',spicy:true,
+  steps:['豆腐切小塊，放入加了少許鹽的熱水燙 1 分鐘撈起。','熱油炒絞肉至變色，下蒜末和 1 大匙豆瓣醬炒香。','加入半碗水、醬油、糖煮滾，放入豆腐小火煮 5 分鐘。','用太白粉水勾芡，撒上花椒粉和蔥花即可。']},
+ {id:'r8',name:'家常豆腐',emoji:'🍄',main:['豆腐','香菇','紅蘿蔔'],extras:['青蔥'],seas:['醬油','素蠔油','糖','太白粉','油'],time:20,diff:'簡單',spicy:false,
+  steps:['豆腐切厚片，香菇、紅蘿蔔切片。','熱油將豆腐兩面煎到金黃後盛起。','炒香香菇和紅蘿蔔，加入醬油、素蠔油、糖和半碗水。','放回豆腐燜煮 5 分鐘，勾薄芡、撒蔥花即可。']},
+ {id:'r9',name:'番茄豆腐湯',emoji:'🍲',main:['番茄','豆腐'],extras:['青蔥'],seas:['鹽','香油'],time:15,diff:'簡單',spicy:false,
+  steps:['番茄切塊，豆腐切小塊。','少許油將番茄炒軟出汁。','加入 3 碗水煮滾，放入豆腐煮 5 分鐘。','加鹽調味，滴幾滴香油、撒蔥花。']},
+ {id:'r10',name:'蔥爆牛肉',emoji:'🥩',main:['牛肉片','洋蔥'],extras:['青蔥','蒜頭'],seas:['醬油','蠔油','米酒','糖','太白粉'],time:15,diff:'簡單',spicy:false,
+  steps:['牛肉片用醬油、米酒、太白粉醃 10 分鐘。','洋蔥切絲，青蔥切段。','大火熱油將牛肉炒到七分熟後盛起。','炒香洋蔥和蒜末，倒回牛肉，加蠔油、糖和青蔥快炒即可。']},
+ {id:'r11',name:'青椒炒牛肉',emoji:'🫑',main:['牛肉片','青椒'],extras:['蒜頭','紅蘿蔔'],seas:['醬油','蠔油','米酒','太白粉'],time:15,diff:'簡單',spicy:false,
+  steps:['牛肉片用醬油、米酒、太白粉醃 10 分鐘。','青椒、紅蘿蔔切條。','熱油將牛肉炒到變色後盛起。','炒青椒和紅蘿蔔，倒回牛肉，加蠔油拌炒均勻。']},
+ {id:'r12',name:'魚香茄子',emoji:'🍆',main:['茄子','絞肉'],extras:['蒜頭','薑','辣椒'],seas:['豆瓣醬','醬油','醋','糖'],time:25,diff:'中等',spicy:true,
+  steps:['茄子切長條，用較多的油煎軟後盛起（保持紫色）。','炒香蒜末、薑末、辣椒，下絞肉炒散。','加入豆瓣醬、醬油、糖和少許水煮滾。','放回茄子拌炒入味，起鍋前淋一點醋。']},
+ {id:'r13',name:'蒜炒青菜',emoji:'🥬',main:[GREENS],extras:['蒜頭'],seas:['鹽','油'],time:10,diff:'簡單',spicy:false,
+  steps:['青菜洗淨切段，蒜頭切片。','熱油爆香蒜片。','下青菜大火快炒，加一點水幫助炒軟。','加鹽調味即可起鍋。']},
+ {id:'r14',name:'金針菇蛋花湯',emoji:'🍲',main:['金針菇','雞蛋'],extras:['青蔥','紅蘿蔔'],seas:['鹽','香油','太白粉'],time:10,diff:'簡單',spicy:false,
+  steps:['金針菇切段，雞蛋打散。','3 碗水煮滾，放入金針菇煮 2 分鐘。','用太白粉水勾薄芡，關小火後慢慢倒入蛋液。','加鹽調味，滴香油、撒蔥花。']},
+ {id:'r15',name:'滑蛋蝦仁',emoji:'🦐',main:['蝦仁','雞蛋'],extras:['青蔥'],seas:['鹽','米酒','太白粉'],time:15,diff:'簡單',spicy:false,
+  steps:['蝦仁用米酒、太白粉抓醃。','雞蛋打散，加少許鹽和 1 小匙太白粉水。','熱油將蝦仁炒到變色。','倒入蛋液，小火輕推到半凝固即關火，撒蔥花。']},
+ {id:'r16',name:'蛤蜊絲瓜',emoji:'🐚',main:['絲瓜','蛤蜊'],extras:['薑'],seas:['鹽','米酒'],time:20,diff:'簡單',spicy:false,
+  steps:['蛤蜊泡鹽水吐沙，絲瓜去皮切塊，薑切絲。','熱油爆香薑絲，下絲瓜炒到稍軟。','加少許水蓋鍋燜 3 分鐘。','放入蛤蜊和米酒，蛤蜊打開後加鹽調味。']},
+ {id:'r17',name:'馬鈴薯燉肉',emoji:'🥔',main:['馬鈴薯','五花肉','紅蘿蔔','洋蔥'],extras:['薑'],seas:['醬油','米酒','冰糖','水'],time:45,diff:'中等',spicy:false,
+  steps:['五花肉切塊，馬鈴薯、紅蘿蔔切滾刀塊，洋蔥切片。','五花肉下鍋煸出油脂，加薑片、洋蔥炒香。','加入馬鈴薯、紅蘿蔔，倒入醬油、米酒、冰糖和淹過食材的水。','煮滾後轉小火燉 30 分鐘，到馬鈴薯鬆軟即可。']},
+ {id:'r18',name:'豆干炒肉絲',emoji:'🥢',main:['豆干','豬肉絲'],extras:['青蔥','辣椒'],seas:['醬油','米酒','糖','太白粉'],time:15,diff:'簡單',spicy:false,
+  steps:['肉絲用醬油、米酒、太白粉醃 5 分鐘，豆干切條。','熱油炒肉絲至變色後盛起。','炒豆干到微焦，加辣椒、蔥段。','倒回肉絲，加醬油、糖拌炒入味。']},
+ {id:'r19',name:'蛋炒飯',emoji:'🍚',main:['白飯','雞蛋'],extras:['青蔥','玉米','紅蘿蔔'],seas:['鹽','醬油','白胡椒'],time:15,diff:'簡單',spicy:false,
+  steps:['隔夜飯先撥散，雞蛋打散。','熱油炒蛋到半熟。','下白飯大火翻炒，讓米粒和蛋均勻混合。','加入玉米、紅蘿蔔丁，用鹽、醬油、白胡椒調味，撒蔥花。']},
+ {id:'r20',name:'培根炒高麗菜',emoji:'🥓',main:['培根','高麗菜'],extras:['蒜頭'],seas:['鹽','黑胡椒'],time:10,diff:'簡單',spicy:false,
+  steps:['培根切段，高麗菜剝片，蒜頭切片。','培根不放油下鍋煸出油脂。','加入蒜片爆香，再下高麗菜大火炒軟。','加鹽和黑胡椒調味即可。']},
+ {id:'r21',name:'炸醬麵',emoji:'🍜',main:['麵條','絞肉','小黃瓜'],extras:['蒜頭'],seas:['甜麵醬','豆瓣醬','醬油','糖'],time:25,diff:'中等',spicy:false,
+  steps:['小黃瓜切絲備用。','熱油炒絞肉至出油，加蒜末炒香。','加入甜麵醬、豆瓣醬各 1 大匙、醬油、糖和半碗水，小火煮 10 分鐘。','麵條煮熟撈起，淋上炸醬、放上小黃瓜絲。']},
+ {id:'r22',name:'螞蟻上樹',emoji:'🌶️',main:['冬粉','絞肉'],extras:['蒜頭','青蔥','辣椒'],seas:['豆瓣醬','醬油','糖'],time:20,diff:'簡單',spicy:true,
+  steps:['冬粉用溫水泡軟後剪短。','熱油炒絞肉，加入蒜末、辣椒和豆瓣醬炒香。','加入 1 碗水、醬油、糖煮滾。','放入冬粉拌炒到吸乾湯汁，撒蔥花。']},
+ {id:'r23',name:'香菇雞湯',emoji:'🍲',main:['雞腿肉','香菇'],extras:['薑','白蘿蔔'],seas:['鹽','米酒'],time:50,diff:'簡單',spicy:false,
+  steps:['雞腿肉切塊，放入滾水汆燙去血水。','香菇泡軟（乾香菇）或直接切片，薑切片。','所有材料加水煮滾，轉小火燉 40 分鐘。','起鍋前加米酒和鹽調味。']},
+ {id:'r24',name:'三杯杏鮑菇',emoji:'🍄',main:['杏鮑菇','九層塔'],extras:['薑','蒜頭','辣椒'],seas:['麻油','醬油','米酒','冰糖'],time:20,diff:'簡單',spicy:false,
+  steps:['杏鮑菇切滾刀塊，乾鍋煎到表面微焦。','加入麻油，炒香薑片和蒜頭。','加醬油、米酒各 1 大匙與少許冰糖，拌炒收汁。','最後拌入九層塔即可。']},
+ {id:'r25',name:'清蒸鯛魚',emoji:'🐟',main:['鯛魚片'],extras:['薑','青蔥','辣椒'],seas:['醬油','米酒','油'],time:20,diff:'簡單',spicy:false,
+  steps:['鯛魚片擦乾，鋪上薑絲，淋少許米酒。','電鍋外鍋放半杯水蒸 10 分鐘。','取出倒掉蒸出的水，鋪上蔥絲和辣椒絲。','淋上燒熱的油和醬油即可。']},
+ {id:'r26',name:'蔥爆花枝',emoji:'🦑',main:['花枝'],extras:['青蔥','薑','辣椒'],seas:['醬油','米酒','糖','油'],time:15,diff:'簡單',spicy:false,
+  steps:['花枝切花刀後切片，青蔥切段，薑切絲。','花枝放入滾水汆燙 10 秒撈起。','熱油爆香薑絲、蔥白和辣椒。','下花枝和蔥綠，加醬油、米酒、少許糖大火快炒 30 秒即可。']},
+ {id:'r27',name:'客家小炒',emoji:'🥢',main:['豆干','五花肉','花枝'],extras:['青蔥','辣椒'],seas:['醬油','米酒','糖','白胡椒'],time:25,diff:'中等',spicy:false,
+  steps:['五花肉、豆干、花枝都切成條狀（傳統用乾魷魚，這裡以花枝取代）。','五花肉下鍋煸到出油、表面微焦。','加入豆干煎到微焦，再下花枝拌炒。','加醬油、米酒、糖和白胡椒，最後放入蔥段、辣椒炒勻。']},
+ {id:'r28',name:'滷豆干',emoji:'🟫',main:['豆干'],extras:['蒜頭','薑','辣椒'],seas:['醬油','冰糖','八角（可省略）','水'],time:30,diff:'簡單',spicy:false,
+  steps:['豆干洗淨，可在表面輕劃幾刀幫助入味。','鍋中放入醬油、冰糖、水（約 1:1:4）和蒜頭、薑片。','放入豆干煮滾後轉小火滷 20 分鐘。','關火浸泡 10 分鐘更入味，切片即可。']},
+ {id:'r29',name:'涼拌豆干絲',emoji:'🥒',main:['豆干','小黃瓜'],extras:['蒜頭','辣椒','紅蘿蔔'],seas:['醬油','醋','糖','香油'],time:10,diff:'簡單',spicy:false,
+  steps:['豆干切細絲，放入滾水燙 1 分鐘後撈起放涼。','小黃瓜、紅蘿蔔切絲。','醬油、醋、糖、香油和蒜末調成醬汁。','所有材料拌勻，冷藏 10 分鐘更好吃。']},
+ {id:'r30',name:'乾煎鮭魚',emoji:'🍣',main:['鮭魚'],extras:['蒜頭'],seas:['鹽','黑胡椒','油'],time:15,diff:'簡單',spicy:false,
+  steps:['鮭魚用紙巾擦乾，兩面撒鹽和黑胡椒。','冷鍋少許油，魚皮朝下開中火煎 4 分鐘。','翻面再煎 3 分鐘至熟。','可在鍋邊放蒜片一起煎香。']},
+ {id:'r31',name:'鮭魚炒飯',emoji:'🍚',main:['鮭魚','白飯','雞蛋'],extras:['青蔥','玉米'],seas:['鹽','白胡椒','油'],time:20,diff:'簡單',spicy:false,
+  steps:['鮭魚煎熟後去皮，用鍋鏟壓成小塊。','熱油炒蛋到半熟。','下白飯大火翻炒到粒粒分明。','加入鮭魚、玉米，用鹽和白胡椒調味，撒蔥花。']},
+ {id:'r32',name:'蚵仔煎',emoji:'🦪',main:['蚵仔','雞蛋'],extras:['小白菜'],seas:['地瓜粉','甜辣醬','鹽','油'],time:20,diff:'中等',spicy:false,
+  steps:['蚵仔用少許地瓜粉輕抓後沖洗乾淨。','地瓜粉 3 大匙加水 6 大匙調成粉漿。','熱油下蚵仔煎 30 秒，倒入粉漿，打上雞蛋。','粉漿半透明時放上青菜，翻面煎到金黃，淋甜辣醬。']},
+ {id:'r33',name:'薑絲蚵仔湯',emoji:'🍲',main:['蚵仔'],extras:['薑','青蔥'],seas:['鹽','米酒','太白粉'],time:10,diff:'簡單',spicy:false,
+  steps:['蚵仔沾少許太白粉，薑切細絲。','水滾後放入薑絲煮 1 分鐘。','放入蚵仔，再次滾起即關火（煮太久會縮）。','加鹽、米酒調味，撒蔥花。']},
+ {id:'r34',name:'鹽烤鯖魚',emoji:'🐟',main:['鯖魚'],extras:[],seas:['鹽','檸檬（可省略）'],time:20,diff:'簡單',spicy:false,
+  steps:['鯖魚擦乾，兩面薄撒一層鹽靜置 5 分鐘。','用紙巾擦去出水。','放入烤箱或氣炸鍋 200°C 烤 12～15 分鐘。','擠點檸檬汁即可。']}
+];
+
+/* ================= 儲存（localStorage） ================= */
+function load(k, d){ try{ const v = localStorage.getItem(k); return v ? JSON.parse(v) : d; }catch(e){ return d; } }
+function save(){
+  try{
+    localStorage.setItem('frh_fridge', JSON.stringify(fridge));
+    localStorage.setItem('frh_ratings', JSON.stringify(ratings));
+    localStorage.setItem('frh_prefs', JSON.stringify(prefs));
+  }catch(e){}
+}
+let fridge  = load('frh_fridge', []);           // [{name, added:'YYYY-MM-DD', shelf}]
+let ratings = load('frh_ratings', {});          // {recipeId: 1~5}
+let prefs   = load('frh_prefs', {noSpicy:false, veg:false, time:0});
+let curCat = '肉類', openItem = null, openRecipe = null, lookup = null;  // lookup = 正在查詢的食材
+
+/* ================= 日期工具 ================= */
+function today0(){ const n = new Date(); return new Date(n.getFullYear(), n.getMonth(), n.getDate()); }
+function fmt(d){ return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0'); }
+function parseD(s){ const [y,m,d] = s.split('-').map(Number); return new Date(y, m-1, d); }
+function daysAgo(n){ const d = today0(); d.setDate(d.getDate()-n); return fmt(d); }
+function leftDays(it){ return it.shelf - Math.round((today0() - parseD(it.added)) / 86400000); }
+function statusOf(l){ return l < 0 ? 'red' : l <= 2 ? 'yellow' : 'green'; }
+function leftText(l){ return l < 0 ? `過期 ${-l} 天` : l === 0 ? '今天到期' : `剩 ${l} 天`; }
+
+/* ================= 推薦演算法 ================= */
+const has = n => fridge.find(f => f.name === n);
+function haveSlot(slot){
+  const opts = Array.isArray(slot) ? slot : [slot];
+  let best = null;
+  opts.forEach(n => { const it = has(n); if(it && (!best || leftDays(it) < leftDays(best))) best = it; });
+  return best;
+}
+const slotLabel = s => Array.isArray(s) ? '任一青菜' : s;
+function isVeg(r){
+  return [...r.main.flat(), ...r.extras].every(n => !['肉類','海鮮'].includes(ING[n].cat));
+}
+function passes(r){
+  if(prefs.noSpicy && r.spicy) return false;
+  if(prefs.veg && !isVeg(r)) return false;
+  if(prefs.time && r.time > prefs.time) return false;
+  return true;
+}
+function evalR(r){
+  const slots = r.main.map(s => ({s, it: haveSlot(s)}));
+  const m = slots.filter(x => x.it).length;
+  const pct = m / slots.length;
+  const exp = slots.filter(x => x.it && leftDays(x.it) >= 0 && leftDays(x.it) <= 2).map(x => x.it.name);
+  const rt = ratings[r.id] || 0;
+  // 分數 = 吻合度 + 用到的食材數 + 快過期加分 + 評分加減分
+  const score = pct*100 + m*5 + exp.length*15 + (rt ? (rt-3)*8 : 0);
+  return {r, slots, m, pct, exp, rt, score, missing: slots.filter(x => !x.it).map(x => slotLabel(x.s))};
+}
+function recommend(){
+  if(!fridge.length) return [];
+  return R.filter(passes).map(evalR).filter(e => e.m > 0).sort((a,b) => b.score - a.score);
+}
+
+/* 依食材查菜譜：所有用到這個食材的料理（不論是否快過期） */
+function recipesWith(name){
+  return R.filter(r => r.main.flat().includes(name) || r.extras.includes(name));
+}
+function lookupList(name){
+  return recipesWith(name).filter(passes).map(evalR).sort((a,b) => b.score - a.score);
+}
+function startLookup(name){
+  lookup = name;
+  document.getElementById('lookSel').value = name;
+  renderRecs();
+  const all = recipesWith(name).length, shown = lookupList(name).length;
+  if(!all) say(`目前還沒有用到「${name}」的食譜，之後我再多學幾道！`,'sad');
+  else if(!shown) say(`「${name}」有 ${all} 道料理，但都被目前的篩選條件擋掉了，試試取消篩選吧。`,'worried');
+  else say(`用「${name}」可以做 ${shown} 道料理` + (shown < all ? `（另有 ${all-shown} 道被篩選條件隱藏）` : '') + '，挑一道吧！');
+  if(window.innerWidth <= 820) document.getElementById('recs').scrollIntoView({behavior:'smooth', block:'start'});
+}
+function endLookup(){
+  lookup = null;
+  document.getElementById('lookSel').value = '';
+  renderRecs();
+  say('回到今日推薦囉！');
+}
+
+/* ================= 小幫手說話 ================= */
+const MOUTH = {
+  happy:  'M40 62 Q50 72 60 62',
+  worried:'M40 66 Q45 62 50 66 Q55 70 60 66',
+  sad:    'M40 68 Q50 60 60 68'
+};
+function say(text, mood='happy'){
+  document.getElementById('bubble').textContent = text;
+  document.getElementById('mouth').setAttribute('d', MOUTH[mood]);
+  document.getElementById('sweat').style.display = mood === 'worried' ? '' : 'none';
+  const bot = document.getElementById('bot');
+  bot.classList.remove('bounce'); void bot.offsetWidth; bot.classList.add('bounce');
+}
+/* 檢查快過期／已過期，回傳提醒 */
+function alertMsg(){
+  const expired = fridge.filter(f => leftDays(f) < 0);
+  if(expired.length){
+    return {text:`${expired.map(f=>f.name).join('、')} 已經過期了！先確認還能不能吃，不行的話就從冰箱移除吧。`, mood:'worried'};
+  }
+  const soon = fridge.filter(f => leftDays(f) <= 2).sort((a,b) => leftDays(a) - leftDays(b));
+  if(soon.length){
+    const f = soon[0], l = leftDays(f);
+    const pick = recommend().find(e => e.slots.some(x => x.it && x.it.name === f.name));
+    const when = l === 0 ? '今天就到期' : `只剩 ${l} 天就過期`;
+    return {text: pick ? `${f.name}${when}了，推薦你先做「${pick.r.name}」喔！`
+                       : `${f.name}${when}了，記得優先用掉它。`, mood:'worried'};
+  }
+  return null;
+}
+function greet(){
+  if(!fridge.length){ say('歡迎！冰箱目前空空的，先在左邊加點食材，我來幫你想今天煮什麼。','sad'); return; }
+  const a = alertMsg();
+  if(a){ say('歡迎回來！' + a.text, a.mood); return; }
+  say(`歡迎回來！今天冰箱裡有 ${fridge.length} 樣食材，我幫你看看能煮什麼。`);
+}
+
+/* ================= 冰箱操作 ================= */
+function addItems(names, addedDate){
+  const added = [], dup = [];
+  names.forEach(n => {
+    if(has(n)) dup.push(n);
+    else { fridge.push({name:n, added: addedDate || fmt(today0()), shelf: ING[n].shelf}); added.push(n); }
+  });
+  renderAll();
+  let msg = '';
+  if(added.length) msg += `已放入：${added.join('、')}。`;
+  if(dup.length)   msg += `${dup.join('、')} 已經在冰箱裡囉。`;
+  const a = alertMsg();
+  if(added.length && !a){
+    const top = recommend()[0];
+    if(top) msg += ` 目前最推薦「${top.r.name}」（吻合度 ${Math.round(top.pct*100)}%）。`;
+  }
+  say(msg || '好像沒有新增任何食材耶。', added.length ? 'happy' : 'worried');
+}
+function removeItem(n){
+  fridge = fridge.filter(f => f.name !== n);
+  if(openItem === n) openItem = null;
+  renderAll();
+  say(fridge.length ? `已從冰箱移除：${n}。` : '冰箱空空的，先去買點菜吧！', fridge.length ? 'happy' : 'sad');
+}
+/* 從一段文字找出食材（長的字先比對，避免「洋蔥」被誤認成「蔥」） */
+function parseText(text){
+  const keys = [...Object.keys(ING), ...Object.keys(ALIAS)].sort((a,b) => b.length - a.length);
+  let t = text; const found = [];
+  keys.forEach(k => {
+    if(t.includes(k)){
+      const n = ING[k] ? k : ALIAS[k];
+      if(!found.includes(n)) found.push(n);
+      t = t.split(k).join('｜');
+    }
+  });
+  return found;
+}
+function addFromText(text){
+  text = text.trim();
+  if(!text) return;
+  const found = parseText(text);
+  if(!found.length){ say(`我看不太懂「${text}」，試試輸入像「雞蛋、番茄」這樣的食材名稱喔。`,'worried'); return; }
+  addItems(found);
+}
+
+/* ================= 畫面渲染 ================= */
+function renderTabs(){
+  document.getElementById('tabs').innerHTML = CATS.map(c =>
+    `<button class="tab ${c===curCat?'on':''}" data-cat="${c}">${CAT_ICON[c]} ${c}</button>`).join('');
+}
+function renderChips(){
+  document.getElementById('chips').innerHTML = ING_RAW.filter(x => x[1] === curCat).map(([n,,e]) =>
+    `<button class="chip ${has(n)?'in':''}" data-ing="${n}">${e} ${n}</button>`).join('');
+}
+function renderFridge(){
+  document.getElementById('fridgeCount').textContent = fridge.length ? `共 ${fridge.length} 樣` : '';
+  const box = document.getElementById('fridge');
+  if(!fridge.length){ box.innerHTML = '<div class="empty">冰箱是空的 🫙<br>點上面的食材或輸入文字來加入</div>'; return; }
+  const list = [...fridge].sort((a,b) => leftDays(a) - leftDays(b));
+  box.innerHTML = list.map(f => {
+    const l = leftDays(f), st = statusOf(l);
+    return `<div class="item ${st}-b ${openItem===f.name?'open':''}" data-item="${f.name}">
+      <div class="item-top" data-toggle="${f.name}">
+        <span class="dot ${st}"></span>
+        <span class="nm">${ING[f.name].emoji} ${f.name}</span>
+        <button class="look" data-look="${f.name}" title="查看用 ${f.name} 做的料理">📖 菜譜</button>
+        <span class="badge ${st}">${leftText(l)}</span>
+      </div>
+      <div class="edit">
+        放入日期 <input type="date" data-date="${f.name}" value="${f.added}" max="${fmt(today0())}">
+        保存 <input type="number" min="1" max="365" data-shelf="${f.name}" value="${f.shelf}"> 天
+        <button class="del" data-del="${f.name}">刪除</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+function recCard(e, icon, extraTag){
+  const p = Math.round(e.pct*100);
+  return `<button class="rec" data-recipe="${e.r.id}">
+    <span class="rank">${icon}</span>
+    <span class="rec-body">
+      <span class="rec-title">${e.r.emoji} ${e.r.name}
+        ${extraTag || ''}
+        ${e.exp.length ? `<span class="tag warn">先用掉 ${e.exp.join('、')}</span>` : ''}
+        ${e.r.spicy ? '<span class="tag">辣</span>' : ''}
+        ${e.rt ? `<span class="tag">你的評分 ${'★'.repeat(e.rt)}</span>` : ''}
+      </span>
+      <span class="bar" style="display:block"><span style="width:${p}%"></span></span>
+      <span class="meta">吻合度 ${p}% ・ ⏱️ ${e.r.time} 分鐘 ・ ${e.r.diff}
+        ${e.missing.length ? `<br><span class="miss">還缺：${e.missing.join('、')}</span>` : '<br>✅ 食材都齊了！'}</span>
+    </span>
+  </button>`;
+}
+function renderLookup(box){
+  const list = lookupList(lookup);
+  const head = `<div class="lookup-head">${ING[lookup].emoji} 用「${lookup}」做的料理（${list.length} 道）
+    <button class="btn ghost" data-back>← 回到今日推薦</button></div>`;
+  if(!list.length){ box.innerHTML = head + '<div class="empty">沒有符合篩選條件的料理 😢<br>試試取消「不吃辣／素食／時間」篩選</div>'; return; }
+  box.innerHTML = head + list.map(e => {
+    const role = e.r.main.flat().includes(lookup) ? '<span class="tag">主角</span>' : '<span class="tag">配料</span>';
+    return recCard(e, '🍽️', role);
+  }).join('');
+}
+function renderRecs(){
+  const box = document.getElementById('recs');
+  if(lookup){ renderLookup(box); return; }
+  if(!fridge.length){ box.innerHTML = '<div class="empty">先在左邊放入食材，<br>我就會推薦可以煮的料理 👨‍🍳</div>'; return; }
+  const list = recommend().slice(0,5);
+  if(!list.length){ box.innerHTML = '<div class="empty">目前的食材和篩選條件找不到料理 😢<br>試試放寬條件，或多加一些食材</div>'; return; }
+  const medal = ['🥇','🥈','🥉','4️⃣','5️⃣'];
+  box.innerHTML = list.map((e,i) => recCard(e, medal[i])).join('');
+}
+function renderModal(){
+  const r = R.find(x => x.id === openRecipe); if(!r) return;
+  const e = evalR(r);
+  const mainLis = e.slots.map(x => {
+    if(Array.isArray(x.s)) return x.it ? `<li>✅ ${x.it.name}（青菜任選）</li>` : `<li class="no">❌ 任一青菜：${x.s.join('／')}</li>`;
+    return x.it ? `<li>✅ ${x.s}</li>` : `<li class="no">❌ ${x.s}（需購買）</li>`;
+  }).join('');
+  const extraLis = r.extras.map(n => has(n) ? `<li>✅ ${n}</li>` : `<li class="opt">➖ ${n}（可省略）</li>`).join('');
+  const rt = ratings[r.id] || 0;
+  document.getElementById('modal').innerHTML = `
+    <button class="close" data-close>✕</button>
+    <h3>${r.emoji} ${r.name}</h3>
+    <div class="meta">⏱️ ${r.time} 分鐘 ・ 難易度：${r.diff} ・ 吻合度 ${Math.round(e.pct*100)}%${r.spicy?' ・ 🌶️ 辣':''}${isVeg(r)?' ・ 🌱 蛋奶素可':''}</div>
+    <h4>主要食材</h4><ul class="ing-list">${mainLis}</ul>
+    ${r.extras.length ? `<h4>可加食材（有更好）</h4><ul class="ing-list">${extraLis}</ul>` : ''}
+    <h4>調味料</h4><ul class="ing-list">${r.seas.map(s => `<li class="opt">${s}</li>`).join('')}</ul>
+    <h4>烹調步驟</h4><ol class="steps">${r.steps.map(s => `<li>${s}</li>`).join('')}</ol>
+    <div class="cook-row">
+      <button class="btn" data-cook>👨‍🍳 我煮好了！</button>
+      <span>評分：</span>
+      <span class="stars">${[1,2,3,4,5].map(n => `<button data-star="${n}" class="${n<=rt?'on':''}" aria-label="${n} 顆星">★</button>`).join('')}</span>
+    </div>`;
+}
+function renderAll(){ renderTabs(); renderChips(); renderFridge(); renderRecs(); if(openRecipe) renderModal(); save(); }
+
+/* ================= 事件 ================= */
+document.getElementById('tabs').onclick = ev => {
+  const b = ev.target.closest('[data-cat]'); if(!b) return;
+  curCat = b.dataset.cat; renderTabs(); renderChips();
+};
+document.getElementById('chips').onclick = ev => {
+  const b = ev.target.closest('[data-ing]'); if(!b) return;
+  const n = b.dataset.ing;
+  has(n) ? removeItem(n) : addItems([n]);
+};
+document.getElementById('addTxt').onclick = () => { const i = document.getElementById('txt'); addFromText(i.value); i.value = ''; };
+document.getElementById('txt').onkeydown = ev => { if(ev.key === 'Enter') document.getElementById('addTxt').click(); };
+document.getElementById('demo').onclick = () => {
+  // 雞胸肉設為 1 天前放入，示範「快過期」提醒
+  const demo = ['雞蛋','番茄','高麗菜','紅蘿蔔'].filter(n => !has(n));
+  if(!has('雞胸肉')) fridge.push({name:'雞胸肉', added: daysAgo(1), shelf: ING['雞胸肉'].shelf});
+  demo.forEach(n => fridge.push({name:n, added: fmt(today0()), shelf: ING[n].shelf}));
+  renderAll();
+  const a = alertMsg();
+  say('示範食材放好了！' + (a ? a.text : ''), a ? a.mood : 'happy');
+};
+document.getElementById('clear').onclick = () => {
+  if(!fridge.length) return;
+  if(confirm('確定要清空冰箱嗎？')){ fridge = []; openItem = null; renderAll(); say('冰箱空空的，先去買點菜吧！','sad'); }
+};
+document.getElementById('fridge').addEventListener('click', ev => {
+  const del = ev.target.closest('[data-del]');
+  if(del){ removeItem(del.dataset.del); return; }
+  const look = ev.target.closest('[data-look]');
+  if(look){ startLookup(look.dataset.look); return; }
+  const t = ev.target.closest('[data-toggle]');
+  if(t){ openItem = openItem === t.dataset.toggle ? null : t.dataset.toggle; renderFridge(); }
+});
+document.getElementById('fridge').addEventListener('change', ev => {
+  const el = ev.target, n = el.dataset.date || el.dataset.shelf;
+  const it = has(n); if(!it) return;
+  if(el.dataset.date && el.value) it.added = el.value;
+  if(el.dataset.shelf){ const v = parseInt(el.value, 10); if(v > 0) it.shelf = v; }
+  renderAll();
+  const a = alertMsg();
+  say(`已更新 ${n} 的保存資訊（${leftText(leftDays(it))}）。` + (a ? ' ' + a.text : ''), a ? a.mood : 'happy');
+});
+
+/* 偏好設定 */
+const pSpicy = document.getElementById('pSpicy'), pVeg = document.getElementById('pVeg'), pTime = document.getElementById('pTime');
+pSpicy.checked = prefs.noSpicy; pVeg.checked = prefs.veg; pTime.value = String(prefs.time);
+function prefChanged(){
+  prefs = {noSpicy: pSpicy.checked, veg: pVeg.checked, time: parseInt(pTime.value, 10)};
+  renderAll();
+  const parts = [];
+  if(prefs.noSpicy) parts.push('不吃辣');
+  if(prefs.veg) parts.push('素食');
+  if(prefs.time) parts.push(`${prefs.time} 分鐘內`);
+  say(parts.length ? `收到！只推薦「${parts.join('、')}」的料理。` : '好的，取消所有篩選條件。');
+}
+pSpicy.onchange = pVeg.onchange = pTime.onchange = prefChanged;
+
+/* 推薦卡片 → 食譜視窗 */
+document.getElementById('recs').onclick = ev => {
+  if(ev.target.closest('[data-back]')){ endLookup(); return; }
+  const b = ev.target.closest('[data-recipe]'); if(!b) return;
+  openRecipe = b.dataset.recipe; renderModal();
+  document.getElementById('overlay').classList.add('show');
+};
+function closeModal(){ openRecipe = null; document.getElementById('overlay').classList.remove('show'); }
+document.getElementById('overlay').onclick = ev => {
+  if(ev.target.id === 'overlay' || ev.target.closest('[data-close]')){ closeModal(); return; }
+  const r = R.find(x => x.id === openRecipe);
+  if(ev.target.closest('[data-cook]')){
+    const used = evalR(r).slots.filter(x => x.it).map(x => x.it.name);
+    fridge = fridge.filter(f => !used.includes(f.name));
+    renderAll();
+    say(used.length ? `辛苦了！已從冰箱扣掉：${used.join('、')}。喜歡的話幫「${r.name}」評個分吧！`
+                    : `辛苦了！這次沒用到冰箱裡的食材。幫「${r.name}」評個分吧！`);
+    return;
+  }
+  const s = ev.target.closest('[data-star]');
+  if(s){
+    ratings[r.id] = parseInt(s.dataset.star, 10);
+    renderAll();
+    say(`收到！你給「${r.name}」${ratings[r.id]} 顆星，我會記住你的口味。`, ratings[r.id] >= 3 ? 'happy' : 'worried');
+  }
+};
+document.addEventListener('keydown', ev => { if(ev.key === 'Escape') closeModal(); });
+
+/* 語音輸入（瀏覽器內建，Chrome 支援） */
+document.getElementById('mic').onclick = () => {
+  const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+  if(!SR){ say('你的瀏覽器不支援語音輸入，建議用電腦版或 Android 的 Chrome。','worried'); return; }
+  const btn = document.getElementById('mic');
+  const rec = new SR();
+  rec.lang = 'zh-TW'; rec.interimResults = false;
+  rec.onstart  = () => { btn.classList.add('listening'); say('我在聽，請說出冰箱裡的食材…'); };
+  rec.onend    = () => btn.classList.remove('listening');
+  rec.onerror  = e => {
+    btn.classList.remove('listening');
+    say(e.error === 'not-allowed' ? '需要允許麥克風權限喔。如果是直接開啟檔案，上傳到 GitHub Pages 後就能使用。' : '剛剛沒聽清楚，再試一次好嗎？','worried');
+  };
+  rec.onresult = e => { const t = e.results[0][0].transcript; document.getElementById('txt').value = t; addFromText(t); };
+  rec.start();
+};
+
+/* 依食材查菜譜：下拉選單（依分類分組，可查冰箱裡沒有的食材） */
+const lookSel = document.getElementById('lookSel');
+CATS.forEach(c => {
+  const g = document.createElement('optgroup'); g.label = CAT_ICON[c] + ' ' + c;
+  ING_RAW.filter(x => x[1] === c).forEach(([n,,e]) => {
+    const o = document.createElement('option'); o.value = n;
+    o.textContent = `${e} ${n}（${recipesWith(n).length} 道）`;
+    g.appendChild(o);
+  });
+  lookSel.appendChild(g);
+});
+lookSel.onchange = () => lookSel.value ? startLookup(lookSel.value) : endLookup();
+
+/* 啟動 */
+renderAll();
+greet();
+</script>
+</body>
+</html>
